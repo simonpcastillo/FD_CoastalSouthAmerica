@@ -28,7 +28,7 @@ source('functions/FD_df.R')
 source('functions/multidim.R')
 
 rep.nulls<-3
-method.nulls<- 'r00_samp'
+method.nulls<- 'r00_samp'  #for other methods see ?commsim
 
 
 ##################
