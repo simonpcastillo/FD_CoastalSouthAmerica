@@ -65,6 +65,7 @@ return(obsFD)
 
 obsFD<- .fdmetrics(df)
 
+write.csv(obsFD, file='data.output/obsFD.csv')
 
 ##################
 # 2. Breaks
@@ -240,3 +241,6 @@ nulldf<- .nulls(null0 = null, rep.nulls)
 }
 
 nullsummary<- .nullsummary(truenull=nulldf)
+
+write.csv(nullsummary, file='data.output/nullsummary.csv')
+
