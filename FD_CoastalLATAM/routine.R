@@ -27,6 +27,10 @@ load('data_input/data_in.RData')
 source('functions/FD_df.R')
 source('functions/multidim.R')
 
+# Make directory for output
+
+dir.create('data_output')
+
 rep.nulls<-3
 method.nulls<- 'r00_samp'  #for other methods see ?commsim
 
@@ -65,7 +69,7 @@ return(obsFD)
 
 obsFD<- .fdmetrics(df)
 
-write.csv(obsFD, file='data.output/obsFD.csv')
+write.csv(obsFD, file='data_output/obsFD.csv')
 
 ##################
 # 2. Breaks
@@ -242,5 +246,5 @@ nulldf<- .nulls(null0 = null, rep.nulls)
 
 nullsummary<- .nullsummary(truenull=nulldf)
 
-write.csv(nullsummary, file='data.output/nullsummary.csv')
+write.csv(nullsummary, file='data_output/nullsummary.csv')
 
