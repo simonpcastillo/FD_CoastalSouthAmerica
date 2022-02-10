@@ -24,27 +24,41 @@ method.nulls<- 'r00_samp'  #for other methods see ?commsim
 ##################
 
 
-df<-FD_df(as.data.frame(df_in[["prop"]]), subcat = c(4,6,6,3,2,3,3,4))
+df<-FD_df(as.data.frame(df_in[["prop"]]), features = c(4,6,6,3,2,3,3,4))
 
-.fdmetrics<- function(df, nPC, maxPcoa){
-        weight <- pivot_wider(df[order(as.numeric(df$time)),c('ecocode', 'time', 'abundance')],
-                                                        names_from = 'ecocode', values_from = 'abundance',id_cols = 'time' )
-        weight<-data.frame(weight, check.names = FALSE)
-        rownames(weight)<-weight$time
-        weight<-weight[-1]
-        weight <- as.matrix(weight)
-        rownames(weight)= paste0('t.', rownames(weight))
+.fdmetrics<- function(df = NULL, nPC, maxPcoa,nom.features=NULL,ord.features=NULL, weight = NULL, coord=NULL){
+  # df = dataframe of relative abundances with dimensions time x ecocodes.
+  # nPC = number of PC axes to include in the computation of functional diversity indices
+  # maxPcoa = maximum number of axis used for PCoa
+  # nom.features = indices of the features that are nominal. Default is NULL
+  # ord.features = indices of the features that are ordinal Default is NULL
+  # weight = matrix of abundances with dimensions time x ecocodes. If NULL, it is calculated from df.
+  # coord = matrix of features/traits with dimensions ecocodes x features. If NULL, it is calculated from df.
 
-        coord  <- subset(df,select = 1:(nchar(as.character(df$ecocode[1]))+1))
-        coord<- unique(coord)
-        rownames(coord)<- coord[,1]
-        coord<-coord[,-1]
 
-        for (n in 1:ncol(coord)) {
-          coord[,n] = as.factor(coord[,n])
+  if(is.null(weight) && is.null(coord)){
+
+              weight <- pivot_wider(df[order(as.numeric(df$time)),c('ecocode', 'time', 'abundance')],
+                                                              names_from = 'ecocode', values_from = 'abundance',id_cols = 'time' )
+              weight<-data.frame(weight, check.names = FALSE)
+              rownames(weight)<-weight$time
+              weight<-weight[-1]
+              weight <- as.matrix(weight)
+              rownames(weight)= paste0('t.', rownames(weight))
+
+              coord  <- subset(df,select = 1:(nchar(as.character(df$ecocode[1]))+1))
+              coord<- unique(coord)
+              rownames(coord)<- coord[,1]
+              coord<-coord[,-1]
+
+              for (n in 1:ncol(coord)) {
+                coord[,n] = as.factor(coord[,n])
+              }
         }
 
-        coord_cat = data.frame(trait_name= colnames(coord), trait_type='N', trait_weight=1, fuzzy_name=NA)
+        coord_cat = data.frame(trait_name= colnames(coord), trait_type=NA, trait_weight=1, fuzzy_name=NA)
+        coord_cat[nom.features,'trait_type'] = 'N'
+        coord_cat[ord.features,'trait_type'] = 'O'
 
 
         sp_dist = mFD::funct.dist(sp_tr         = coord,
@@ -85,7 +99,7 @@ df<-FD_df(as.data.frame(df_in[["prop"]]), subcat = c(4,6,6,3,2,3,3,4))
 return(fd_ind_values)
 }
 #
-obsFD<- .fdmetrics(df,nPC=4, maxPcoa=10)
+obsFD<- .fdmetrics(df = df ,nPC=4, maxPcoa=10,nom.features = 1:8)
 
 
 write.csv(obsFD, file='data_output/obsFD.csv')
@@ -142,7 +156,7 @@ null<-simulate(nm, nsim =rep.nulls)
 
 ## WARNING: it may generate errors associated with convex hull. Those are removed from the final output.
 
-.nulls<- function(null0, rep.nulls, maxPcoa, nPC){
+.nulls<- function(null0, rep.nulls, maxPcoa, nPC, features){
   nullsdf<- data.frame()
 
   foreach (p=1:rep.nulls) %do% {
@@ -151,7 +165,7 @@ null<-simulate(nm, nsim =rep.nulls)
     m0<- null0[,,p]
     m1<-(t(m0)/rowSums(t(m0)))
 
-    datam<-FD_df(as.data.frame(m1), subcat = c(4,6,6,3,2,3,3,4))
+    datam<-FD_df(as.data.frame(m1), features)
 
 
 
@@ -221,7 +235,7 @@ null<-simulate(nm, nsim =rep.nulls)
   return(nullsdf)
 }
 
-nulldf<- .nulls(null0 = null, rep.nulls, maxPcoa = 10, nPC=4)
+nulldf<- .nulls(null0 = null, rep.nulls, maxPcoa = 10, nPC=4,features =  c(4,6,6,3,2,3,3,4))
 
 
 .nullsummary<-function(truenull){
