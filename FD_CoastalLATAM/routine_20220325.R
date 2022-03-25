@@ -57,7 +57,11 @@ df<-FD_df(as.data.frame(df0), features = c(6,6,6))
               }
 
               if(!is.null(ord.features)){
-                coord[,ord.features] = factor(coord[,ord.features],ordered = TRUE )
+                for (i in ord.features) {
+                  coord[,i] = factor(coord[,i],ordered = TRUE )
+
+
+                }
               }
         }
 
