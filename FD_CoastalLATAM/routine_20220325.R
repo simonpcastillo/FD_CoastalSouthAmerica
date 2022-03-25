@@ -10,6 +10,7 @@ pacman::p_load(foreach,doParallel, vegan, SYNCSA, tidyr,tseries,strucchange, svM
 source('functions/FD_df.R')
 
 # Load data (it load a list named df_in with one dataframe with occurrences and a matrix with the proportional occurences per community/column)
+#load('data_input/data_in.RData')
 df0=read.csv('data_input/master_data.csv', check.names = F, row.names = 1)
 # Make directory for output
 
