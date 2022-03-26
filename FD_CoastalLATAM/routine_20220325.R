@@ -12,30 +12,32 @@ source('functions/FD_df.R')
 # Load data (it load a list named df_in with one dataframe with occurrences and a matrix with the proportional occurences per community/column)
 #load('data_input/data_in.RData')
 df0=read.csv('data_input/master_data.csv', check.names = F, row.names = 1)
+
 # Make directory for output
+dir.create('data_output')
 
-#dir.create('data_output')
-
-rep.nulls<-3
-method.nulls<- 'r00_samp'  #for other methods see ?commsim
 
 ##################
 # 1. Observed metrics
 ##################
 
-
-#df<-FD_df(as.data.frame(df_in[["prop"]]), features = c(4,6,6,3,2,3,3,4))
-df<-FD_df(as.data.frame(df0), features = c(6,6,6))
-
-.fdmetrics<- function(df = NULL, nPC, maxPcoa,nom.features=NULL,ord.features=NULL, weight = NULL, coord=NULL){
+# no need to edit
+.fdmetrics<- function(df = NULL, nPC, maxPcoa,features, nom.features=NULL,ord.features=NULL,quan.features=NULL ,weight = NULL, coord=NULL){
   # df = dataframe of relative abundances with dimensions time x ecocodes.
   # nPC = number of PC axes to include in the computation of functional diversity indices
   # maxPcoa = maximum number of axis used for PCoa
+  # features = max value for each feature
   # nom.features = indices of the features that are nominal. Default is NULL
   # ord.features = indices of the features that are ordinal Default is NULL
+  # quan.features = indices of the features that are quantitative Default is NULL
   # weight = matrix of abundances with dimensions time x ecocodes. If NULL, it is calculated from df.
   # coord = matrix of features/traits with dimensions ecocodes x features. If NULL, it is calculated from df.
 
+  if(any(quan.features == nom.features)) stop('A feature cannot be nominal and quantitative')
+  if(any(quan.features == ord.features)) stop('A feature cannot be ordinal and quantitative')
+  if(any(nom.features == ord.features)) stop('A feature cannot be ordinal and nominal')
+
+  df<-FD_df(as.data.frame(df0), features = features)
 
   if(is.null(weight) && is.null(coord)){
 
@@ -52,8 +54,15 @@ df<-FD_df(as.data.frame(df0), features = c(6,6,6))
               rownames(coord)<- coord[,1]
               coord<-coord[,-1]
 
-              for (n in 1:ncol(coord)) {
+              for(i in quan.features){
+                coord[,i] = as.numeric(coord[,i])
+
+              }
+
+              if(!is.null(nom.features)){
+                for (n in nom.features) {
                 coord[,n] = as.factor(coord[,n])
+                }
               }
 
               if(!is.null(ord.features)){
@@ -63,11 +72,15 @@ df<-FD_df(as.data.frame(df0), features = c(6,6,6))
 
                 }
               }
+
+
+
         }
 
         coord_cat = data.frame(trait_name= colnames(coord), trait_type=NA, trait_weight=1, fuzzy_name=NA)
         coord_cat[nom.features,'trait_type'] = 'N'
         coord_cat[ord.features,'trait_type'] = 'O'
+        coord_cat[quan.features,'trait_type'] = 'Q'
 
 
         sp_dist = mFD::funct.dist(sp_tr         = coord,
@@ -102,19 +115,28 @@ df<-FD_df(as.data.frame(df0), features = c(6,6,6))
         fd_ind_values$raoQ <-obsRao$FunRao
         fd_ind_values$simpson<- obsRao$Simpson
         rownames(fd_ind_values) =substring(rownames(fd_ind_values), 3, 10000L)
-        fd_ind_values$time = rownames(fd_ind_values)
+        fd_ind_values = data.frame(time= rownames(fd_ind_values), fd_ind_values)
 
 
 return(fd_ind_values)
 }
 #
-obsFD<- .fdmetrics(df = df ,nPC=4, maxPcoa=10,nom.features = 2:3,ord.features = 1)
+
+
+obsFD<- .fdmetrics(df = df0 , #dataframe of relative abundances with dimensions time x ecocodes
+                   nPC=4,   # nPC = number of PC axes to include in the computation of functional diversity indices
+                   maxPcoa=10, # maxPcoa = maximum number of axis used for PCoa
+                   features = c(6,6,6), # features = max value for each feature
+                   nom.features = 2:3, #vector of indices of nominal features in features
+                   ord.features = 1, #vector of indices of ordinal features in features
+                   quan.features = NULL #vector of indices of quantitative features in features
+                   )
 
 
 write.csv(obsFD, file='data_output/obsFD.csv')
 
 ##################
-# 2. Breaks
+# 2. Temporal breaks
 ##################
 .breaks<- function(x){
   breaks<- list()
@@ -160,12 +182,20 @@ breaks<- .breaks(x = obsFD)
 # 3. Null models
 ##################
 
-nm<-nullmodel(df_in[["count"]],method.nulls)  ## Df of counts not proportional abundance
+rep.nulls<-3
+method.nulls<- 'r00_samp'  #for other methods see ?commsim
+
+nm<-nullmodel(df_in[["count"]],method.nulls)  ## Df of counts NOT proportional abundance
 null<-simulate(nm, nsim =rep.nulls)
 
 ## WARNING: it may generate errors associated with convex hull. Those are removed from the final output.
+# No need to edit
+.nulls<- function(null0, rep.nulls, maxPcoa, nPC, features, nom.features, ord.features, quan.features){
 
-.nulls<- function(null0, rep.nulls, maxPcoa, nPC, features){
+  if(any(quan.features == nom.features)) stop('A feature cannot be nominal and quantitative')
+  if(any(quan.features == ord.features)) stop('A feature cannot be ordinal and quantitative')
+  if(any(nom.features == ord.features)) stop('A feature cannot be ordinal and nominal')
+
   nullsdf<- data.frame()
 
   foreach (p=1:rep.nulls) %do% {
@@ -175,8 +205,6 @@ null<-simulate(nm, nsim =rep.nulls)
     m1<-(t(m0)/rowSums(t(m0)))
 
     datam<-FD_df(as.data.frame(m1), features)
-
-
 
     df<-datam
 
@@ -194,7 +222,12 @@ null<-simulate(nm, nsim =rep.nulls)
     rownames(coord)<- coord[,1]
     coord<-coord[,-1]
 
-    for (n in 1:ncol(coord)) {
+    for(i in quan.features){
+      coord[,i] = as.numeric(coord[,i])
+    }
+
+
+    for (n in nom.features) {
       coord[,n] = as.factor(coord[,n])
     }
 
@@ -206,8 +239,10 @@ null<-simulate(nm, nsim =rep.nulls)
       }
     }
 
-    coord_cat = data.frame(trait_name= colnames(coord), trait_type='N', trait_weight=1, fuzzy_name=NA)
-
+    coord_cat = data.frame(trait_name= colnames(coord), trait_type=NA, trait_weight=1, fuzzy_name=NA)
+    coord_cat[nom.features,'trait_type'] = 'N'
+    coord_cat[ord.features,'trait_type'] = 'O'
+    coord_cat[quan.features,'trait_type'] = 'Q'
 
     sp_dist = mFD::funct.dist(sp_tr         = coord,
                               tr_cat        = coord_cat,
@@ -251,8 +286,16 @@ null<-simulate(nm, nsim =rep.nulls)
   }
   return(nullsdf)
 }
+#
 
-nulldf<- .nulls(null0 = null, rep.nulls, maxPcoa = 10, nPC=4,features =  c(4,6,6,3,2,3,3,4))
+nulldf<- .nulls(null0 = null,
+                rep.nulls,
+                maxPcoa = 10, nPC=4,
+                features =  c(4,6,6,3,2,3,3,4), # features = max value for each feature
+                nom.features = 1:8, #vector of indices of nominal features in features
+                ord.features = NULL, #vector of indices of ordinal features in features
+                quan.features = NULL #vector of indices of quantitative features in features
+                )
 
 
 .nullsummary<-function(truenull){
