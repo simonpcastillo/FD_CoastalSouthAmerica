@@ -160,7 +160,7 @@ breaks<- .breaks(x = obsFD)
 # 3. Null models
 ##################
 
-nm<-nullmodel(df_in[["count"]],method.nulls)
+nm<-nullmodel(df_in[["count"]],method.nulls)  ## Df of counts not proportional abundance
 null<-simulate(nm, nsim =rep.nulls)
 
 ## WARNING: it may generate errors associated with convex hull. Those are removed from the final output.
@@ -196,6 +196,14 @@ null<-simulate(nm, nsim =rep.nulls)
 
     for (n in 1:ncol(coord)) {
       coord[,n] = as.factor(coord[,n])
+    }
+
+    if(!is.null(ord.features)){
+      for (i in ord.features) {
+        coord[,i] = factor(coord[,i],ordered = TRUE )
+
+
+      }
     }
 
     coord_cat = data.frame(trait_name= colnames(coord), trait_type='N', trait_weight=1, fuzzy_name=NA)
