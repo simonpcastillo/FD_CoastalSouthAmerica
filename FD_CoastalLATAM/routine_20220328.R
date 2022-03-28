@@ -234,7 +234,8 @@ write.csv(obsFD, file='data_output/obsFD.csv')
 
     obsRao<-rao.diversity(traits=coord, weight)
 
-    fd_ind_values$fred <-obsRao$FunRedundancy
+   # fd_ind_values$fred <-obsRao$FunRedundancy
+    fd_ind_values$fred <-(obsRao$Simpson-obsRao$FunRao)/obsRao$Simpson
     fd_ind_values$raoQ <-obsRao$FunRao
     fd_ind_values$simpson<- obsRao$Simpson
     rownames(fd_ind_values) =substring(rownames(fd_ind_values), 3, 10000L)
@@ -256,15 +257,19 @@ method.nulls<- 'r00_samp'  #for other methods see ?commsim
 nm<-nullmodel(df0,method.nulls)  ## Df of counts NOT proportional abundance
 null<-simulate(nm, nsim =rep.nulls)
 
+#parallel::detectCores()
+
 nulldf<- .nulls(null0 = null,
                 rep.nulls,
                 maxPcoa = 10, nPC=4,
                 features =  c(6,6,6), # features = max value for each feature
-                nom.features = 1, #vector of indices of nominal features in features
-                ord.features = 2:3, #vector of indices of ordinal features in features
+                nom.features = 2:3, #vector of indices of nominal features in features
+                ord.features = 1, #vector of indices of ordinal features in features
                 quan.features = NULL, #vector of indices of quantitative features in features
                 numCores= 24)
 
+
+write.csv(nulldf, file='data_output/allnull.csv')
 
 .nullsummary<-function(truenull){
   nullmodelsummary<- truenull%>%
@@ -334,9 +339,6 @@ nulldf<- .nulls(null0 = null,
 
   return(nullmodelsummary)
 }
-
-write.csv(nulldf, file='data_output/allnull.csv')
-
 
 nullsummary<- .nullsummary(truenull=nulldf)
 
