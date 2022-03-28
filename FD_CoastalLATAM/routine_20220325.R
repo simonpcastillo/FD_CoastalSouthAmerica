@@ -182,23 +182,23 @@ breaks<- .breaks(x = obsFD)
 # 3. Null models
 ##################
 
-rep.nulls<-3
-method.nulls<- 'r00_samp'  #for other methods see ?commsim
 
-nm<-nullmodel(df_in[["count"]],method.nulls)  ## Df of counts NOT proportional abundance
-null<-simulate(nm, nsim =rep.nulls)
 
 ## WARNING: it may generate errors associated with convex hull. Those are removed from the final output.
 # No need to edit
-.nulls<- function(null0, rep.nulls, maxPcoa, nPC, features, nom.features, ord.features, quan.features){
+.nulls<- function(null0, rep.nulls, maxPcoa, nPC, features, nom.features, ord.features, quan.features, numCores){
 
   if(any(quan.features == nom.features)) stop('A feature cannot be nominal and quantitative')
   if(any(quan.features == ord.features)) stop('A feature cannot be ordinal and quantitative')
   if(any(nom.features == ord.features)) stop('A feature cannot be ordinal and nominal')
 
   nullsdf<- data.frame()
+  registerDoParallel(numCores)  # use multicore, set to the number of our cores
 
-  foreach (p=1:rep.nulls) %do% {
+  foreach (p=1:rep.nulls, .combine = rbind) %dopar% {
+    source('functions/FD_df.R')
+    pacman::p_load(foreach,doParallel, vegan, SYNCSA, tidyr,tseries,strucchange, svMisc, dplyr, mFD)
+
     print(paste0('null iteration: ',p, ' out of ',rep.nulls ))
     #progress(p,max.value = rep.nulls )
     m0<- null0[,,p]
@@ -284,9 +284,15 @@ null<-simulate(nm, nsim =rep.nulls)
     nullsdf<-rbind(nullsdf, nullFunDiv)
 
   }
-  return(nullsdf)
+  #return(nullsdf)
 }
 #
+
+rep.nulls<-100 #using 24 cores lasts 100rep/10min
+method.nulls<- 'r00_samp'  #for other methods see ?commsim
+
+nm<-nullmodel(df_in[["count"]],method.nulls)  ## Df of counts NOT proportional abundance
+null<-simulate(nm, nsim =rep.nulls)
 
 nulldf<- .nulls(null0 = null,
                 rep.nulls,
@@ -294,8 +300,8 @@ nulldf<- .nulls(null0 = null,
                 features =  c(4,6,6,3,2,3,3,4), # features = max value for each feature
                 nom.features = 1:8, #vector of indices of nominal features in features
                 ord.features = NULL, #vector of indices of ordinal features in features
-                quan.features = NULL #vector of indices of quantitative features in features
-                )
+                quan.features = NULL, #vector of indices of quantitative features in features
+                numCores= 24)
 
 
 .nullsummary<-function(truenull){
