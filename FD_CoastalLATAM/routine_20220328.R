@@ -140,50 +140,7 @@ obsFD<- .fdmetrics(df = df0 , #dataframe of relative abundances with dimensions 
 write.csv(obsFD, file='data_output/obsFD.csv')
 
 ##################
-# 2. Temporal breaks
-##################
-.breaks<- function(x){
-  breaks<- list()
-
-  b.TaxRich <- ts(x$sp_richn, start=c(min(as.numeric(rownames(x))), 1), end=c(max(as.numeric(rownames(x))), 1), frequency=1)
-  b.raoQ <- ts(x$raoQ, start=c(min(as.numeric(rownames(x))), 1), end=c(max(as.numeric(rownames(x))), 1), frequency=1)
-  b.FRic <- ts(x$fric, start=c(min(as.numeric(rownames(x))), 1), end=c(max(as.numeric(rownames(x))), 1), frequency=1)
-  b.FRed <- ts(x$fred, start=c(min(as.numeric(rownames(x))), 1), end=c(max(as.numeric(rownames(x))), 1), frequency=1)
-  b.FEve <- ts(x$feve, start=c(min(as.numeric(rownames(x))), 1), end=c(max(as.numeric(rownames(x))), 1), frequency=1)
-  b.FSpe <- ts(x$fspe, start=c(min(as.numeric(rownames(x))), 1), end=c(max(as.numeric(rownames(x))), 1), frequency=1)
-
-  # Breakpoints
-  bp.TaxRich <- breakpoints(b.TaxRich ~ 1)
-  bp.raoQ <- breakpoints(b.raoQ  ~ 1)
-  bp.FRic <- breakpoints(b.FRic ~ 1)
-  bp.FRed <- breakpoints(b.FRed ~ 1)
-  bp.FEve<- breakpoints(b.FEve ~ 1)
-  bp.FSpe <- breakpoints(b.FSpe ~ 1)
-
-  ## confidence intervals
-  ci.TaxRich <- confint(bp.TaxRich)
-  ci.raoQ <- confint(bp.raoQ)
-  ci.FRic <- confint(bp.FRic)
-  ci.FRed <- confint(bp.FRed)
-  ci.FEve <- confint(bp.FEve)
-  ci.FSpe <- confint(bp.FSpe)
-
-  breaks[['TaxRich']]<- list(bp.TaxRich,ci.TaxRich )
-  breaks[['raoQ']]<- list(bp.raoQ,ci.raoQ )
-  breaks[['FRic']]<- list(bp.FRic,ci.FRic )
-  breaks[['FRed']]<- list(bp.FRed,ci.FRed )
-  breaks[['FEve']]<- list(bp.FEve,ci.FEve )
-  breaks[['FSpe']]<- list(bp.FSpe,ci.FSpe )
-
-  return(breaks)
-
-}
-
-breaks<- .breaks(x = obsFD)
-
-
-##################
-# 3. Null models
+# 2. Null models
 ##################
 
 
@@ -206,7 +163,8 @@ breaks<- .breaks(x = obsFD)
     print(paste0('null iteration: ',p, ' out of ',rep.nulls ))
     #progress(p,max.value = rep.nulls )
     m0<- null0[,,p]
-    m1<-(t(m0)/rowSums(t(m0)))
+    #m1<-(t(m0)/rowSums(t(m0)))
+    m1<-((m0)/rowSums((m0)))
 
     datam<-FD_df(as.data.frame(m1), features)
 
@@ -295,15 +253,15 @@ breaks<- .breaks(x = obsFD)
 rep.nulls<-3 #using 24 cores lasts 100rep/10min
 method.nulls<- 'r00_samp'  #for other methods see ?commsim
 
-nm<-nullmodel(df_in[["count"]],method.nulls)  ## Df of counts NOT proportional abundance
+nm<-nullmodel(df0,method.nulls)  ## Df of counts NOT proportional abundance
 null<-simulate(nm, nsim =rep.nulls)
 
 nulldf<- .nulls(null0 = null,
                 rep.nulls,
                 maxPcoa = 10, nPC=4,
-                features =  c(4,6,6,3,2,3,3,4), # features = max value for each feature
-                nom.features = 1:8, #vector of indices of nominal features in features
-                ord.features = NULL, #vector of indices of ordinal features in features
+                features =  c(6,6,6), # features = max value for each feature
+                nom.features = 1, #vector of indices of nominal features in features
+                ord.features = 2:3, #vector of indices of ordinal features in features
                 quan.features = NULL, #vector of indices of quantitative features in features
                 numCores= 24)
 
